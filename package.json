@@ -8,6 +8,8 @@
   },
   "dependencies": {
     "async": "^3.2.0",
+    "compress-object": "^1.0.0",
+    "compression": "^1.7.4",
     "cookie-parser": "~1.4.4",
     "cors": "^2.8.5",
     "debug": "~2.6.9",
@@ -17,6 +19,7 @@
     "jade": "~1.11.0",
     "moment-timezone": "^0.5.28",
     "mongodb": "^3.5.5",
-    "morgan": "~1.9.1"
+    "morgan": "~1.9.1",
+    "uuid": "^7.0.3"
   }
 }
