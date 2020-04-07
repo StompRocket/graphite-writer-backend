@@ -55,6 +55,7 @@ client.connect(err => {
   });
   router.get('/:uid/:id', async function (req, res, next) {
     if (req.headers.authorization) {
+      console.log("authorization exists")
       admin.auth().verifyIdToken(req.headers.authorization)
       .then(async function (decodedToken) {
         let uid = decodedToken.uid;
@@ -83,6 +84,7 @@ client.connect(err => {
         res.send({error: "invalid auth"})
       });
     } else {
+      console.log("no authorization")
       let documents = await db.collection("documents").find({_id: req.params.id}).toArray()
       console.log(documents, "docs")
       let results = documents[0]

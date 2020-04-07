@@ -148,7 +148,7 @@ client.connect(err => {
         console.log("written", error)
       })
     })
-  } else if(false) {
+  } else if (true) {
     async.each(Object.keys(sharedDocs), function (uid, callback) {
       let docs = users[uid].docs
       if (docs) {
