@@ -95,7 +95,7 @@ client.connect(err => {
         let documents = await db.collection("documents").find({_id: req.params.id}).toArray()
         console.log(documents, "docs")
         let results = documents[0]
-console.log(req.body)
+        console.log(req.body)
         if (results.owner == uid) {
           if (req.body.title) {
             await db.collection("documents").updateOne({_id: req.params.id}, {$set: {title: req.body.title}})
@@ -107,14 +107,11 @@ console.log(req.body)
             console.log("updated title", req.params.id)
 
           }
-<<<<<<< HEAD
           if (req.body.shared) {
             await db.collection("documents").updateOne({_id: req.params.id}, {$set: {shared: req.body.shared}})
             console.log("updated share", req.params.id)
 
           }
-=======
->>>>>>> master
           res.status(200)
           res.send({success: true})
           db.collection("documents").updateOne({_id: req.params.id}, {$set: {date: req.body.time}}).then(() => {
