@@ -4,7 +4,7 @@ const keys = require('../private/keys')
 const MongoClient = require('mongodb').MongoClient;
 const admin = require("firebase-admin")
 const moment = require("moment-timezone")
-const { v4: uuid } = require("uuid")
+const {v4: uuid} = require("uuid")
 const JSONC = require("../jsonc.min.js")
 admin.initializeApp({
   credential: admin.credential.cert(keys.firebase),
@@ -13,12 +13,41 @@ admin.initializeApp({
 const client = new MongoClient(keys.mongoURI, {useNewUrlParser: true});
 client.connect(err => {
   const db = client.db("GraphiteWriter")
+
+  function logLogin(uid) {
+    let time = moment().unix()
+    admin.auth().getUser(uid)
+    .then(async function (userRecord) {
+      // See the UserRecord reference doc for the contents of userRecord.
+      console.log('Successfully fetched user data:', userRecord.toJSON().displayName, uid);
+      let user = userRecord.toJSON()
+      let records = await db.collection("users").find({"_id": uid}).toArray()
+      let userInfo = {
+        email: user.email,
+        name: user.displayName,
+        "profilePic": user.photoURL,
+        "lastSeen": time
+      }
+      if (records.length > 0) {
+        await db.collection("users").updateOne({"_id": uid}, {$set: {email: user.email, name: user.displayName, profilePic: user.photoURL, lastSeen: time}})
+        console.log("updated user", uid, user.displayName, time)
+      } else {
+       await db.collection("users").insertOne({"_id": uid, email: user.email, name: user.displayName, profilePic: user.photoURL, lastSeen: time, joined: time})
+        console.log("created user", uid, user.displayName, time)
+      }
+    })
+    .catch(function (error) {
+      console.log('Error fetching user data:', error);
+    });
+  }
+
   router.get('/', function (req, res, next) {
     if (req.headers.authorization) {
       admin.auth().verifyIdToken(req.headers.authorization)
       .then(async function (decodedToken) {
         let uid = decodedToken.uid;
         console.log(uid)
+        logLogin(uid)
         let documents = await db.collection("documents").find({owner: uid}, {
           projection: {
             title: 1, date: 1, owner: 1, opened: 1, shared: 1
@@ -60,12 +89,13 @@ client.connect(err => {
       .then(async function (decodedToken) {
         let uid = decodedToken.uid;
         console.log(uid)
+        logLogin(uid)
         let documents = await db.collection("documents").find({_id: req.params.id}).toArray()
         console.log(documents, "docs")
         let results = documents[0]
 
         if (results.owner == uid || results.shared) {
-        //  results.data = JSONC.pack(results.data)
+          //  results.data = JSONC.pack(results.data)
           res.status(200)
           res.send(results)
           db.collection("documents").updateOne({_id: req.params.id}, {$set: {opened: moment().unix()}}).then(() => {
@@ -108,6 +138,7 @@ client.connect(err => {
       .then(async function (decodedToken) {
         let uid = decodedToken.uid;
         console.log(uid)
+        logLogin(uid)
         let documents = await db.collection("documents").find({_id: req.params.id}).toArray()
         console.log(documents, "docs")
         let results = documents[0]
@@ -130,7 +161,11 @@ client.connect(err => {
           }
           res.status(200)
           res.send({success: true})
-          db.collection("documents").updateOne({_id: req.params.id}, {$set: {date: req.body.time,opened: req.body.time}}).then(() => {
+          db.collection("documents").updateOne({_id: req.params.id}, {
+            $set: {
+              date: req.body.time, opened: req.body.time
+            }
+          }).then(() => {
             console.log("updated last edited and opened", req.params.id)
           })
         } else {
@@ -158,6 +193,7 @@ client.connect(err => {
       .then(async function (decodedToken) {
         let uid = decodedToken.uid;
         console.log(uid)
+        logLogin(uid)
         let documents = await db.collection("documents").find({_id: req.params.id}).toArray()
         console.log(documents, "docs")
         let results = documents[0]
@@ -170,7 +206,6 @@ client.connect(err => {
             res.send({success: true})
 
           }
-
 
 
         } else {
@@ -197,17 +232,18 @@ client.connect(err => {
       admin.auth().verifyIdToken(req.headers.authorization)
       .then(async function (decodedToken) {
         let uid = decodedToken.uid;
+        logLogin(uid)
         console.log(uid)
         let id = uuid()
-        db.collection("documents").insertOne({_id: id, title: req.body.title, date: req.body.time,opened: req.body.time, owner: uid, data: ""}).then(() => {
+        db.collection("documents").insertOne({
+          _id: id, title: req.body.title, date: req.body.time, opened: req.body.time, owner: uid, data: ""
+        }).then(() => {
           console.log("created", id)
           console.log(req.body)
 
           res.status(200)
           res.send({success: true, id: id})
         })
-
-
 
 
       }).catch(function (error) {
