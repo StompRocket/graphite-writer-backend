@@ -90,7 +90,7 @@ client.connect(err => {
           let sharedDoc = false
           if (doc.owner == uid) {
             owner = "You"
-            console.log(" owner", Object.keys(sharedDocs).length)
+            console.log(" owner")
           } else {
             console.log("not owner")
             sharedDoc = true
