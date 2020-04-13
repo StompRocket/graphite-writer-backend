@@ -6,12 +6,26 @@ const admin = require("firebase-admin")
 const moment = require("moment-timezone")
 const {v4: uuid} = require("uuid")
 const JSONC = require("../jsonc.min.js")
+const nlp = require("compromise")
 let whitelist = ["DeKQnb9uQSOchpr5qD3oDkIBYnv1", "dphPDWHJfDakVZVIO75w0Bc1e9m1"]
 /*
 admin.initializeApp({
   credential: admin.credential.cert(keys.firebase),
   databaseURL: "https://graphite-88e41.firebaseio.com"
 });*/
+function convertDeltaToText(delta)  {
+  let string = ""
+
+  delta.ops.forEach(ops => {
+
+    if (typeof ops.insert == "string") {
+      string += ops.insert
+    }
+
+  })
+
+  return string
+}
 const client = new MongoClient(keys.mongoURI, {useNewUrlParser: true});
 client.connect(err => {
   const db = client.db("GraphiteWriter")
@@ -114,6 +128,11 @@ client.connect(err => {
 
           res.status(200)
           res.send(documents[0])
+        //  console.log(documents[0].data)
+         let string =  convertDeltaToText(JSON.parse(documents[0].data))
+          let doc = nlp(string)
+          console.log("topcs", doc.topics().unique().json())
+          console.log("topcs", nlp(documents[0].title).topics().unique().json())
           res.end()
         } else {
           res.status(400)

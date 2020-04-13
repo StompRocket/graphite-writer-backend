@@ -6,6 +6,7 @@ const admin = require("firebase-admin")
 const moment = require("moment-timezone")
 const {v4: uuid} = require("uuid")
 const JSONC = require("../jsonc.min.js")
+const async = require("async")
 admin.initializeApp({
   credential: admin.credential.cert(keys.firebase),
   databaseURL: "https://graphite-88e41.firebaseio.com"
@@ -29,10 +30,16 @@ client.connect(err => {
         "lastSeen": time
       }
       if (records.length > 0) {
-        await db.collection("users").updateOne({"_id": uid}, {$set: {email: user.email, name: user.displayName, profilePic: user.photoURL, lastSeen: time}})
+        await db.collection("users").updateOne({"_id": uid}, {
+          $set: {
+            email: user.email, name: user.displayName, profilePic: user.photoURL, lastSeen: time
+          }
+        })
         console.log("updated user", uid, user.displayName, time)
       } else {
-       await db.collection("users").insertOne({"_id": uid, email: user.email, name: user.displayName, profilePic: user.photoURL, lastSeen: time, joined: time})
+        await db.collection("users").insertOne({
+          "_id": uid, email: user.email, name: user.displayName, profilePic: user.photoURL, lastSeen: time, joined: time
+        })
         console.log("created user", uid, user.displayName, time)
       }
     })
@@ -53,19 +60,54 @@ client.connect(err => {
             title: 1, date: 1, owner: 1, opened: 1, shared: 1
           }
         }).toArray()
+        let sharedDocs = await db.collection("sharedDocOpens").findOne({"_id": uid})
+        if (sharedDocs) {
+          await async.forEach(Object.keys(sharedDocs), async id => {
+            if (sharedDocs[id].owner) {
+              let doc = await db.collection("documents").findOne({_id: id}, {
+                projection: {
+                  title: 1, date: 1, owner: 1, opened: 1, shared: 1
+                }
+              })
+              if (doc) {
+                console.log("shared doc", doc)
+
+                let ownerInfo = await db.collection("users").findOne({_id: doc.owner})
+                doc.ownerInfo = ownerInfo.name
+                doc.opened = sharedDocs[id].timeStamp
+                documents.push(doc)
+              }
+            }
+          })
+
+          console.log("done with shared docs")
+
+        }
         console.log(documents, "docs")
         let results = documents.map(doc => {
           let opened = doc.opened ? doc.opened : doc.date
-
+          let owner = ""
+          let sharedDoc = false
+          if (doc.owner == uid) {
+            owner = "You"
+            console.log(" owner", Object.keys(sharedDocs).length)
+          } else {
+            console.log("not owner")
+            sharedDoc = true
+            owner = doc.ownerInfo
+          }
           return {
+            sharedDoc: sharedDoc,
             index: opened,
             opened: opened,
             title: doc.title,
             date: doc.date,
-            owner: "You",
+            owner: owner,
+            ownerId: doc.owner,
             id: doc["_id"]
           }
         })
+        console.log(results)
         res.status(200)
         res.send(results)
         res.end()
@@ -98,9 +140,41 @@ client.connect(err => {
           //  results.data = JSONC.pack(results.data)
           res.status(200)
           res.send(results)
-          db.collection("documents").updateOne({_id: req.params.id}, {$set: {opened: moment().unix()}}).then(() => {
-            console.log("updated last opened", req.params.id)
-          })
+
+          if (results.owner != uid) {
+            console.log("adding shared log")
+            db.collection("sharedDocOpens").findOne({"_id": uid}).then(doc => {
+              console.log(doc, "shated doc opens")
+              if (doc) {
+                db.collection("sharedDocOpens").updateOne({"_id": uid}, {
+                  $set: {
+                    [req.params.id]: {
+                      doc: req.params.id, owner: results.owner, timeStamp: moment().unix()
+                    }
+                  }
+                }).then(err => {
+                  console.log(err.result.n, "added shared log")
+
+                })
+              } else {
+                db.collection("sharedDocOpens").insertOne({
+                  "_id": uid,
+                  [req.params.id]: {
+                    doc: req.params.id, owner: results.owner, timeStamp: moment().unix()
+                  }
+                }).then(err => {
+                  console.log(err.result.n, "created shared log")
+
+                })
+              }
+            })
+            /*
+        */
+          } else {
+            db.collection("documents").updateOne({_id: req.params.id}, {$set: {opened: moment().unix()}}).then(() => {
+              console.log("updated last opened", req.params.id)
+            })
+          }
         } else {
           res.status(400)
           res.send({error: "un authorized"})
