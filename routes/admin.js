@@ -29,6 +29,55 @@ function convertDeltaToText(delta)  {
 const client = new MongoClient(keys.mongoURI, {useNewUrlParser: true});
 client.connect(err => {
   const db = client.db("GraphiteWriter")
+  router.get('/users/:uid', async function (req, res, next) {
+    if (req.headers.authorization) {
+      console.log("authorization exists")
+      admin.auth().verifyIdToken(req.headers.authorization)
+      .then(async function (decodedToken) {
+        let uid = decodedToken.uid;
+        if (whitelist.indexOf(uid) > -1) {
+
+          let users = await db.collection("users").find({_id: req.params.uid}).toArray()
+if (users[0]) {
+  res.status(200)
+  res.send(users[0])
+  res.end()
+} else {
+  res.status(404)
+  res.send( "no user")
+  res.end()
+}
+
+        } else {
+          res.status(400)
+          res.send({error: "un authorized"})
+          res.end()
+        }
+      }).catch(function (error) {
+        // Handle error
+        console.log("admin error", error, req.headers.authorization)
+        res.status(400)
+        res.send({error: "invalid auth"})
+      });
+    } else {
+      console.log("no authorization")
+      let documents = await db.collection("documents").find({_id: req.params.id}).toArray()
+      console.log(documents, "docs")
+      let results = documents[0]
+
+      if (results.shared) {
+        res.status(200)
+        res.send(results)
+
+      } else {
+        res.status(400)
+        res.send({error: "un authorized"})
+        res.end()
+      }
+
+    }
+
+  });
   router.get('/users', async function (req, res, next) {
     if (req.headers.authorization) {
       console.log("authorization exists")
