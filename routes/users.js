@@ -59,6 +59,8 @@ client.connect(err => {
           console.log(`updated: ${uid} to ${req.body.locale}`)
         }
     res.status(200)
+        res.send({success: true})
+        res.end()
       })
     }})
 })
