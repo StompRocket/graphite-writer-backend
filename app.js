@@ -31,6 +31,7 @@ app.use('/', indexRouter);
 //app.use('/users', usersRouter);
 app.use('/api/v1/documents', documentsRouter);
 app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/user/', usersRouter);
 
 /*
 // error handler
