@@ -7,6 +7,15 @@ const moment = require("moment-timezone")
 const {v4: uuid} = require("uuid")
 const JSONC = require("../jsonc.min.js")
 const async = require("async")
+let maxDocSize = 3145728
+function bytes(s) {
+  return ~-encodeURI(s).split(/%..|./).length
+}
+
+function jsonSize(s) {
+  return bytes(JSON.stringify(s))
+}
+
 admin.initializeApp({
   credential: admin.credential.cert(keys.firebase),
   databaseURL: "https://graphite-88e41.firebaseio.com"
@@ -218,30 +227,39 @@ client.connect(err => {
         let results = documents[0]
         console.log(req.body)
         if (results.owner == uid) {
-          if (req.body.title) {
-            await db.collection("documents").updateOne({_id: req.params.id}, {$set: {title: req.body.title}})
-            console.log("updated title", req.params.id)
+          let size = jsonSize(req.body)
+          console.log("doc Size", size)
+          if (size < maxDocSize) {
+            if (req.body.title) {
+              await db.collection("documents").updateOne({_id: req.params.id}, {$set: {title: req.body.title}})
+              console.log("updated title", req.params.id)
 
-          }
-          if (req.body.data) {
-            await db.collection("documents").updateOne({_id: req.params.id}, {$set: {data: req.body.data}})
-            console.log("updated title", req.params.id)
-
-          }
-          if (req.body.shared) {
-            await db.collection("documents").updateOne({_id: req.params.id}, {$set: {shared: req.body.shared}})
-            console.log("updated share", req.params.id, req.body.shared)
-
-          }
-          res.status(200)
-          res.send({success: true})
-          db.collection("documents").updateOne({_id: req.params.id}, {
-            $set: {
-              date: req.body.time, opened: req.body.time
             }
-          }).then(() => {
-            console.log("updated last edited and opened", req.params.id)
-          })
+            if (req.body.data) {
+              await db.collection("documents").updateOne({_id: req.params.id}, {$set: {data: req.body.data}})
+              console.log("updated data", req.params.id)
+
+            }
+            if (req.body.shared) {
+              await db.collection("documents").updateOne({_id: req.params.id}, {$set: {shared: req.body.shared}})
+              console.log("updated share", req.params.id, req.body.shared)
+
+            }
+            res.status(200)
+            res.send({success: true})
+            db.collection("documents").updateOne({_id: req.params.id}, {
+              $set: {
+                date: req.body.time, opened: req.body.time
+              }
+            }).then(() => {
+              console.log("updated last edited and opened", req.params.id)
+            })
+          } else {
+            res.status(403)
+            res.send({error: "too large"})
+            res.end()
+          }
+
         } else {
           res.status(400)
           res.send({error: "un authorized"})
