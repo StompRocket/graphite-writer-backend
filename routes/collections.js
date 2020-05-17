@@ -82,7 +82,7 @@ client.connect(err => {
             res.send({success: true})
             db.collection("documents").updateOne({_id: req.params.id}, {
               $set: {
-                date: req.body.time, opened: req.body.time
+                date: req.body.time
               }
             }).then(() => {
               console.log("updated last edited and opened", req.params.id)
