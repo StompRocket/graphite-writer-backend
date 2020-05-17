@@ -66,7 +66,7 @@ client.connect(err => {
         logLogin(uid)
         let documents = await db.collection("documents").find({owner: uid}, {
           projection: {
-            title: 1, date: 1, owner: 1, opened: 1, shared: 1
+            title: 1, date: 1, owner: 1, opened: 1, shared: 1, tags: 1
           }
         }).toArray()
         let sharedDocs = await db.collection("sharedDocOpens").findOne({"_id": uid})
@@ -97,13 +97,16 @@ client.connect(err => {
           let opened = doc.opened ? doc.opened : doc.date
           let owner = ""
           let sharedDoc = false
+          let tags = []
           if (doc.owner == uid) {
             owner = "You"
             console.log(" owner")
+            tags = doc.tags
           } else {
             console.log("not owner")
             sharedDoc = true
             owner = doc.ownerInfo
+            tags = [{text: "shared"}]
           }
           return {
             sharedDoc: sharedDoc,
@@ -111,6 +114,7 @@ client.connect(err => {
             opened: opened,
             title: doc.title,
             date: doc.date,
+            tags: tags,
             owner: owner,
             ownerId: doc.owner,
             id: doc["_id"]

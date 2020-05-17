@@ -7,6 +7,7 @@ var compression = require('compression')
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var documentsRouter = require('./routes/documents');
+var collectionsRouter = require('./routes/collections');
 var adminRouter = require('./routes/admin.js');
 const cors = require('cors')
 var app = express();
@@ -30,6 +31,7 @@ function shouldCompress (req, res) {
 app.use('/', indexRouter);
 //app.use('/users', usersRouter);
 app.use('/api/v1/documents', documentsRouter);
+app.use('/api/v1/collections', collectionsRouter);
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/user/', usersRouter);
 
