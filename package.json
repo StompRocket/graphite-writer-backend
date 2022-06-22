@@ -7,7 +7,7 @@
     "dev": "DEBUG=graphite-backend:* npm start"
   },
   "dependencies": {
-    "async": "^3.2.0",
+    "async": "^3.2.2",
     "compress-object": "^1.0.0",
     "compression": "^1.7.4",
     "compromise": "^13.1.1",
