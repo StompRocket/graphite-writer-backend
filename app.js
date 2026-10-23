@@ -15,6 +15,11 @@ app.use(cors())
 app.use(logger('dev'));
 app.use(express.json({limit: '50mb'}))
 app.use(express.urlencoded({ extended: false }));
+// express 5 leaves req.body undefined when there is no body; routes expect an object
+app.use(function (req, res, next) {
+  if (req.body === undefined) req.body = {}
+  next()
+})
 app.use(cookieParser());
 app.use(compression({ filter: shouldCompress, level: 4 }))
 
